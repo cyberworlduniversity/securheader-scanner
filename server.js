@@ -2,10 +2,11 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+const { resolvePublicTarget, createPinnedAgents } = require('./target-safety');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const HEADERS = {
@@ -20,16 +21,28 @@ const HEADERS = {
 };
 
 app.post('/api/scan', async (req, res) => {
-  let { url } = req.body;
-  if (!url) return res.status(400).json({ error: 'URL is required' });
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  let target;
+  try {
+    target = await resolvePublicTarget(req.body && req.body.url);
+  } catch (error) {
+    return res.status(400).json({ error: error.message || 'Invalid or blocked target URL.' });
+  }
 
   try {
-    const response = await axios.get(url, {
-      timeout: 10000, maxRedirects: 5,
+    const agents = createPinnedAgents(target);
+    const response = await axios.get(target.url.toString(), {
+      timeout: 10000,
+      maxRedirects: 0,
+      maxContentLength: 65536,
+      responseType: 'stream',
       validateStatus: () => true,
+      httpAgent: agents.httpAgent,
+      httpsAgent: agents.httpsAgent,
       headers: { 'User-Agent': 'SecureHeaderScanner/1.0' },
     });
+    if (response.data && typeof response.data.destroy === 'function') {
+      response.data.destroy();
+    }
 
     const results = Object.entries(HEADERS).map(([key, meta]) => {
       const value = response.headers[key];
@@ -43,7 +56,7 @@ app.post('/api/scan', async (req, res) => {
 
     const secure = results.filter(r => r.status === 'secure').length;
     res.json({
-      url, statusCode: response.status,
+      url: target.url.toString(), statusCode: response.status,
       score: Math.round((secure / results.length) * 100),
       summary: { secure, missing: results.length - secure, total: results.length },
       results,

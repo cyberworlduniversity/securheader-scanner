@@ -36,6 +36,10 @@ function normalizeTargetUrl(input) {
     throw new Error("A valid URL (up to 2048 characters) is required.");
   }
   const raw = input.trim();
+  const explicitScheme = raw.match(/^([a-z][a-z0-9+.-]*):/i);
+  if (explicitScheme && !["http", "https"].includes(explicitScheme[1].toLowerCase())) {
+    throw new Error("Only HTTP and HTTPS targets are supported.");
+  }
   const candidate = /^https?:\/\//i.test(raw) ? raw : "https://" + raw;
   const target = new URL(candidate);
   if (target.protocol !== "http:" && target.protocol !== "https:") {

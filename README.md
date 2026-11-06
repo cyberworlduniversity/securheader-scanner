@@ -98,3 +98,49 @@ Response: {
 ---
 
 *Built by hemanathan115 • MIT License*
+
+
+## Repository Quick Start
+
+Clone the canonical repository:
+
+```bash
+git clone https://github.com/cyberworlduniversity/securheader-scanner.git
+cd securheader-scanner
+```
+
+### Requirements and installation
+
+- Node.js 18+
+
+```bash
+npm install
+```
+
+### Start the application
+
+```bash
+npm start
+```
+
+Open http://localhost:5000 in a browser.
+
+### Build / validation
+
+Check that dependencies install cleanly and that the application starts without runtime errors. No automated test script is currently declared in package.json.
+
+Only scan websites you own or are explicitly authorized to assess.
+
+### Application flow
+
+```mermaid
+flowchart TD
+    A[Open application] --> B[Load frontend and server]
+    B --> C[Accept user input]
+    C --> D{Input valid?}
+    D -- No --> E[Show validation message]
+    D -- Yes --> F[Run securheader scanner analysis]
+    F --> G[Render results]
+    G --> H[Finish]
+    E --> H
+```
